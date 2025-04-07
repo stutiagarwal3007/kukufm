@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuku FM - Daily Briefing Demo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f9fafb;
+            margin: 0;
+            padding: 2rem;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        p {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        form {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            font-weight: 600;
+        }
+
+        select, button {
+            width: 100%;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 1rem;
+        }
+
+        button {
+            background-color: #4f46e5;
+            color: white;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #4338ca;
+        }
+
+        #loading-indicator {
+            font-size: 0.95rem;
+            color: #555;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid #ccc;
+            border-top: 2px solid #4f46e5;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        #briefing-output-area {
+            max-width: 700px;
+            margin: 2rem auto;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .briefing-output pre {
+            background-color: #f1f5f9;
+            padding: 1rem;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Kuku FM Daily Briefing</h1>
+    <p>Select a user to generate their personalized daily audio briefing.</p>
+
+    <form id="briefing-form">
+        <label for="user_id">Select User:</label>
+        <select name="user_id" id="user_id">
+            {% for uid in user_ids %}
+                <option value="{{ uid }}">{{ uid }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" id="generate-button">Generate Briefing</button>
+        <span id="loading-indicator" style="display: none;">Generating... <span class="spinner"></span></span>
+    </form>
+
+    <div id="briefing-output-area"></div>
+
+    <script>
+        const form = document.getElementById('briefing-form');
+        const button = document.getElementById('generate-button');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const outputArea = document.getElementById('briefing-output-area');
+        const userIdSelect = document.getElementById('user_id');
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const selectedUserId = userIdSelect.value;
+            outputArea.innerHTML = '';
+            loadingIndicator.style.display = 'inline-block';
+            button.disabled = true;
+
+            try {
+                const formData = new FormData(form);
+                const response = await fetch('/get_briefing', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    outputArea.innerHTML = `
+                        <div class="briefing-output">
+                            <h2>Generated Briefing for ${result.user_id}:</h2>
+                            <pre>${result.briefing}</pre>
+                        </div>
+                    `;
+                } else {
+                    const errorMessage = result.error || `HTTP Error: ${response.status}`;
+                    outputArea.innerHTML = `<p class="error">Error: ${errorMessage}</p>`;
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                outputArea.innerHTML = `<p class="error">An unexpected error occurred. Please check the console.</p>`;
+            } finally {
+                loadingIndicator.style.display = 'none';
+                button.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
